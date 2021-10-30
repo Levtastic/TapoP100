@@ -162,13 +162,11 @@ class P100():
             errorMessage = self.errorCodes[str(errorCode)]
             raise Exception(f"Error Code: {errorCode}, {errorMessage}")
 
-    def turnOn(self):
+    def setDeviceInfo(self, params):
         URL = f"http://{self.ipAddress}/app?token={self.token}"
         Payload = {
             "method": "set_device_info",
-            "params":{
-                "device_on": True
-            },
+            "params": params,
             "requestTimeMils": int(round(time.time() * 1000)),
             "terminalUUID": self.terminalUUID
         }
@@ -188,77 +186,26 @@ class P100():
 
         r = requests.post(URL, json=SecurePassthroughPayload, headers=headers)
 
-        decryptedResponse = self.tpLinkCipher.decrypt(r.json()["result"]["response"])
+        decryptedResponse = json.loads(self.tpLinkCipher.decrypt(
+            r.json()["result"]["response"]))
 
-        if ast.literal_eval(decryptedResponse)["error_code"] != 0:
-            errorCode = ast.literal_eval(decryptedResponse)["error_code"]
-            errorMessage = self.errorCodes[str(errorCode)]
-            raise Exception(f"Error Code: {errorCode}, {errorMessage}")
+        if decryptedResponse['error_code'] != 0:
+            raise Exception(
+                self.errorCodes.get(decryptedResponse['error_code'],
+                                    decryptedResponse['error_code'])
+            )
 
-    def setBrightness(self, brightness):
-        URL = f"http://{self.ipAddress}/app?token={self.token}"
-        Payload = {
-            "method": "set_device_info",
-            "params":{
-                "brightness": brightness
-            },
-            "requestTimeMils": int(round(time.time() * 1000)),
-        }
+    def setParams(self, **params):
+        self.setDeviceInfo(params)
 
-        headers = {
-            "Cookie": self.cookie
-        }
-
-        EncryptedPayload = self.tpLinkCipher.encrypt(json.dumps(Payload))
-
-        SecurePassthroughPayload = {
-            "method": "securePassthrough",
-            "params":{
-                "request": EncryptedPayload
-            }
-        }
-
-        r = requests.post(URL, json=SecurePassthroughPayload, headers=headers)
-
-        decryptedResponse = self.tpLinkCipher.decrypt(r.json()["result"]["response"])
-
-        if ast.literal_eval(decryptedResponse)["error_code"] != 0:
-            errorCode = ast.literal_eval(decryptedResponse)["error_code"]
-            errorMessage = self.errorCodes[str(errorCode)]
-            raise Exception(f"Error Code: {errorCode}, {errorMessage}")
+    def turnOn(self):
+        return self.setParams(device_on=True)
 
     def turnOff(self):
-        URL = f"http://{self.ipAddress}/app?token={self.token}"
-        Payload = {
-            "method": "set_device_info",
-            "params":{
-                "device_on": False
-            },
-            "requestTimeMils": int(round(time.time() * 1000)),
-            "terminalUUID": self.terminalUUID
-        }
+        return self.setParams(device_on=False)
 
-        headers = {
-            "Cookie": self.cookie
-        }
-
-        EncryptedPayload = self.tpLinkCipher.encrypt(json.dumps(Payload))
-
-        SecurePassthroughPayload = {
-            "method": "securePassthrough",
-            "params":{
-                "request": EncryptedPayload
-            }
-        }
-
-        r = requests.post(URL, json=SecurePassthroughPayload, headers=headers)
-
-        decryptedResponse = self.tpLinkCipher.decrypt(r.json()["result"]["response"])
-
-        if ast.literal_eval(decryptedResponse)["error_code"] != 0:
-            errorCode = ast.literal_eval(decryptedResponse)["error_code"]
-            errorMessage = self.errorCodes[str(errorCode)]
-            raise Exception(f"Error Code: {errorCode}, {errorMessage}")
+    def setBrightness(self, brightness):
+        return self.setParams(brightness=brightness)
 
     def getDeviceInfo(self):
         URL = f"http://{self.ipAddress}/app?token={self.token}"
