@@ -230,7 +230,14 @@ class P100():
         r = requests.post(URL, json=SecurePassthroughPayload, headers=headers)
         decryptedResponse = self.tpLinkCipher.decrypt(r.json()["result"]["response"])
 
-        return json.loads(decryptedResponse)
+        info = json.loads(decryptedResponse)
+
+        if info['error_code'] != 0:
+            raise Exception(
+                self.errorCodes.get(info['error_code'], info['error_code'])
+            )
+
+        return info
 
     def getDeviceName(self):
         self.handshake()
