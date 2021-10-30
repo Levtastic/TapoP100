@@ -14,7 +14,7 @@ pip3 install git@github.com:Levtastic/TapoP100.git
 ## Usage
 
 ```python
-from PyP100 import PyP100
+import PyP100
 
 p100 = PyP100.P100("192.168.X.X", "email@gmail.com", "Password123")  # Creating a P100 plug object
 
