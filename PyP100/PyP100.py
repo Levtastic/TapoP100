@@ -60,6 +60,15 @@ class P100():
         self.encryptCredentials(email, password)
         self.createKeyPair()
 
+    def __getattr__(self, attr):
+        try:
+            return self.getParam(attr)
+        except KeyError:
+            pass
+
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{attr}'")
+
     def encryptCredentials(self, email, password):
         #Password Encoding
         self.encodedPassword = tp_link_cipher.TpLinkCipher.mime_encoder(password.encode("utf-8"))
