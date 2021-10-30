@@ -43,6 +43,9 @@ ERROR_CODES = {
     "-1003": "JSON formatting error "
 }
 
+class P100Error(Exception):
+    pass
+
 class P100():
     _decode_params = {
         'nickname': lambda p: b64decode(p).decode('utf-8')
@@ -141,9 +144,11 @@ class P100():
             self.cookie = r.headers["Set-Cookie"][:-13]
 
         except:
-            errorCode = r.json()["error_code"]
-            errorMessage = self.errorCodes[str(errorCode)]
-            raise Exception(f"Error Code: {errorCode}, {errorMessage}")
+            raise self.generateException(r.json()["error_code"])
+
+    def generateException(self, error_code):
+        error_text = self.errorCodes.get(error_code, "Unknown error code")
+        return P100Error(f"{error_code}: {error_text}")
 
     def login(self):
         URL = f"http://{self.ipAddress}/app"
@@ -175,9 +180,7 @@ class P100():
         try:
             self.token = ast.literal_eval(decryptedResponse)["result"]["token"]
         except:
-            errorCode = ast.literal_eval(decryptedResponse)["error_code"]
-            errorMessage = self.errorCodes[str(errorCode)]
-            raise Exception(f"Error Code: {errorCode}, {errorMessage}")
+            raise self.generateException(ast.literal_eval(decryptedResponse)["error_code"])
 
     def setDeviceInfo(self, params):
         URL = f"http://{self.ipAddress}/app?token={self.token}"
@@ -207,10 +210,7 @@ class P100():
             r.json()["result"]["response"]))
 
         if decryptedResponse['error_code'] != 0:
-            raise Exception(
-                self.errorCodes.get(decryptedResponse['error_code'],
-                                    decryptedResponse['error_code'])
-            )
+            raise self.generateException(decryptedResponse['error_code'])
 
     def setParams(self, **params):
         self.setDeviceInfo(params)
@@ -258,8 +258,6 @@ class P100():
         info = json.loads(decryptedResponse)
 
         if info['error_code'] != 0:
-            raise Exception(
-                self.errorCodes.get(info['error_code'], info['error_code'])
-            )
+            raise self.generateException(info['error_code'])
 
         return info
