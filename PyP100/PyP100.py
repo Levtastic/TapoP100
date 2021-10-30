@@ -44,6 +44,10 @@ ERROR_CODES = {
 }
 
 class P100():
+    _decode_params = {
+        'nickname': lambda p: b64decode(p).decode('utf-8')
+    }
+
     def __init__ (self, ipAddress, email, password):
         self.ipAddress = ipAddress
         self.terminalUUID = str(uuid.uuid4())
@@ -197,6 +201,14 @@ class P100():
 
     def setParams(self, **params):
         self.setDeviceInfo(params)
+
+    def getParam(self, param):
+        result = self.getDeviceInfo()['result'][param]
+
+        if param in self._decode_params:
+            result = self._decode_params[param](result)
+
+        return result
 
     def turnOn(self):
         return self.setParams(device_on=True)
