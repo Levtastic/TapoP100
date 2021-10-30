@@ -48,7 +48,7 @@ class P100():
         'nickname': lambda p: b64decode(p).decode('utf-8')
     }
 
-    def __init__ (self, ipAddress, email, password):
+    def __init__ (self, ipAddress, email, password, login=True):
         self.ipAddress = ipAddress
         self.terminalUUID = str(uuid.uuid4())
 
@@ -59,6 +59,10 @@ class P100():
 
         self.encryptCredentials(email, password)
         self.createKeyPair()
+
+        if login:
+            self.handshake()
+            self.login()
 
     def __getattr__(self, attr):
         try:
