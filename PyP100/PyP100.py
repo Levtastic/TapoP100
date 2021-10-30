@@ -1,15 +1,13 @@
 import requests
-from base64 import b64encode, b64decode
+from base64 import b64decode
 import hashlib
 from Crypto.PublicKey import RSA
 import time
 import json
-from Crypto.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5
+from Crypto.Cipher import PKCS1_v1_5
 from . import tp_link_cipher
 import ast
-import pkgutil
 import uuid
-import json
 
 #Old Functions to get device list from tplinkcloud
 def getToken(email, password):
@@ -51,7 +49,7 @@ class P100():
         'nickname': lambda p: b64decode(p).decode('utf-8')
     }
 
-    def __init__ (self, ipAddress, email, password, login=True):
+    def __init__(self, ipAddress, email, password, login=True):
         self.ipAddress = ipAddress
         self.terminalUUID = str(uuid.uuid4())
 
@@ -88,7 +86,7 @@ class P100():
         self.keys = RSA.generate(1024)
 
         self.privateKey = self.keys.exportKey("PEM")
-        self.publicKey  = self.keys.publickey().exportKey("PEM")
+        self.publicKey = self.keys.publickey().exportKey("PEM")
 
     def decode_handshake_key(self, key):
         decode: bytes = b64decode(key.encode("UTF-8"))
@@ -99,8 +97,8 @@ class P100():
         if do_final is None:
             raise ValueError("Decryption failed!")
 
-        b_arr:bytearray = bytearray()
-        b_arr2:bytearray = bytearray()
+        b_arr: bytearray = bytearray()
+        b_arr2: bytearray = bytearray()
 
         for i in range(0, 16):
             b_arr.insert(i, do_final[i])
@@ -128,8 +126,8 @@ class P100():
     def handshake(self):
         URL = f"http://{self.ipAddress}/app"
         Payload = {
-            "method":"handshake",
-            "params":{
+            "method": "handshake",
+            "params": {
                 "key": self.publicKey.decode("utf-8"),
                 "requestTimeMils": int(round(time.time() * 1000))
             }
@@ -153,8 +151,8 @@ class P100():
     def login(self):
         URL = f"http://{self.ipAddress}/app"
         Payload = {
-            "method":"login_device",
-            "params":{
+            "method": "login_device",
+            "params": {
                 "username": self.encodedEmail,
                 "password": self.encodedPassword
             },
@@ -167,8 +165,8 @@ class P100():
         EncryptedPayload = self.tpLinkCipher.encrypt(json.dumps(Payload))
 
         SecurePassthroughPayload = {
-            "method":"securePassthrough",
-            "params":{
+            "method": "securePassthrough",
+            "params": {
                 "request": EncryptedPayload
             }
         }
@@ -246,8 +244,8 @@ class P100():
         EncryptedPayload = self.tpLinkCipher.encrypt(json.dumps(Payload))
 
         SecurePassthroughPayload = {
-            "method":"securePassthrough",
-            "params":{
+            "method": "securePassthrough",
+            "params": {
                 "request": EncryptedPayload
             }
         }
