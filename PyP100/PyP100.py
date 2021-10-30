@@ -9,7 +9,8 @@ from . import tp_link_cipher
 import ast
 import uuid
 
-#Old Functions to get device list from tplinkcloud
+
+# Old Functions to get device list from tplinkcloud
 def getToken(email, password):
     URL = "https://eu-wap.tplinkcloud.com"
     Payload = {
@@ -24,6 +25,7 @@ def getToken(email, password):
 
     return requests.post(URL, json=Payload).json()['result']['token']
 
+
 def getDeviceList(email, password):
     URL = "https://eu-wap.tplinkcloud.com?token=" + getToken(email, password)
     Payload = {
@@ -31,6 +33,7 @@ def getDeviceList(email, password):
     }
 
     return requests.post(URL, json=Payload).json()
+
 
 ERROR_CODES = {
     "0": "Success",
@@ -41,8 +44,10 @@ ERROR_CODES = {
     "-1003": "JSON formatting error "
 }
 
+
 class P100Error(Exception):
     pass
+
 
 class P100():
     _decode_params = {
@@ -75,12 +80,16 @@ class P100():
             f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
     def encryptCredentials(self, email, password):
-        #Password Encoding
-        self.encodedPassword = tp_link_cipher.TpLinkCipher.mime_encoder(password.encode("utf-8"))
+        # Password Encoding
+        self.encodedPassword = tp_link_cipher.TpLinkCipher.mime_encoder(
+            password.encode("utf-8")
+        )
 
-        #Email Encoding
+        # Email Encoding
         self.encodedEmail = self.sha_digest_username(email)
-        self.encodedEmail = tp_link_cipher.TpLinkCipher.mime_encoder(self.encodedEmail.encode("utf-8"))
+        self.encodedEmail = tp_link_cipher.TpLinkCipher.mime_encoder(
+            self.encodedEmail.encode("utf-8")
+        )
 
     def createKeyPair(self):
         self.keys = RSA.generate(1024)
@@ -173,12 +182,16 @@ class P100():
 
         r = requests.post(URL, json=SecurePassthroughPayload, headers=headers)
 
-        decryptedResponse = self.tpLinkCipher.decrypt(r.json()["result"]["response"])
+        decryptedResponse = self.tpLinkCipher.decrypt(
+            r.json()["result"]["response"]
+        )
 
         try:
             self.token = ast.literal_eval(decryptedResponse)["result"]["token"]
         except:
-            raise self.generateException(ast.literal_eval(decryptedResponse)["error_code"])
+            raise self.generateException(
+                ast.literal_eval(decryptedResponse)["error_code"]
+            )
 
     def setDeviceInfo(self, params):
         URL = f"http://{self.ipAddress}/app?token={self.token}"
@@ -251,7 +264,9 @@ class P100():
         }
 
         r = requests.post(URL, json=SecurePassthroughPayload, headers=headers)
-        decryptedResponse = self.tpLinkCipher.decrypt(r.json()["result"]["response"])
+        decryptedResponse = self.tpLinkCipher.decrypt(
+            r.json()["result"]["response"]
+        )
 
         info = json.loads(decryptedResponse)
 
