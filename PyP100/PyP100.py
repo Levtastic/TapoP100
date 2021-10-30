@@ -263,19 +263,3 @@ class P100():
             )
 
         return info
-
-    def getDeviceName(self):
-        self.handshake()
-        self.login()
-        data = self.getDeviceInfo()
-
-        data = json.loads(data)
-
-        if data["error_code"] != 0:
-            errorCode = ast.literal_eval(decryptedResponse)["error_code"]
-            errorMessage = self.errorCodes[str(errorCode)]
-            raise Exception(f"Error Code: {errorCode}, {errorMessage}")
-        else:
-            encodedName = data["result"]["nickname"]
-            name = b64decode(encodedName)
-            return name.decode("utf-8")
