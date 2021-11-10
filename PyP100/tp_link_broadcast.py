@@ -1,13 +1,40 @@
+import logging
 import socket
 import json
 
+from datetime import datetime, timedelta
 from select import select
 from random import randrange
 from zlib import crc32
 from Crypto.PublicKey import RSA
 
 
-def get_device_infos(*, timeout=0.2, port=20002):
+_cached_infos_time = datetime.min
+_cached_infos = []
+
+
+def get_device_infos(*, cache_time=5, timeout=0.2, port=20002):
+    global _cached_infos_time
+    global _cached_infos
+
+    if cache_time and _cached_infos:
+        if not isinstance(cache_time, timedelta):
+            cache_time = timedelta(seconds=cache_time)
+
+        if datetime.now() - cache_time <= _cached_infos_time:
+            logging.debug('Hit broadcast cache')
+            yield from _cached_infos
+            return
+
+    _cached_infos = []
+    for result in _get_device_infos(timeout=timeout, port=port):
+        _cached_infos.append(result)
+        yield result
+
+    _cached_infos_time = datetime.now()
+
+
+def _get_device_infos(*, timeout=0.2, port=20002):
     payload = get_payload()
 
     for response in get_device_responses(payload, timeout=timeout, port=port):
@@ -73,5 +100,25 @@ def get_device_responses(payload, *, timeout=0.2, port=20002):
 
 
 if __name__ == '__main__':
+    import time
+
+    logging.basicConfig(format='%(levelname)s:%(message)s',
+                        level=logging.DEBUG)
+
+    print('Uncached:')
     for device in get_device_infos():
+        print(device['result']['ip'])
+
+    print('Cached:')
+    for device in get_device_infos():
+        print(device['result']['ip'])
+
+    print('Sleeping for 5.1 seconds...')
+    time.sleep(5.1)
+    print('Uncached:')
+    for device in get_device_infos():
+        print(device['result']['ip'])
+
+    print('Uncached:')
+    for device in get_device_infos(cache_time=0):
         print(device['result']['ip'])
