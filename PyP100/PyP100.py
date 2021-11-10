@@ -1,13 +1,15 @@
 import requests
-from base64 import b64decode
 import hashlib
-from Crypto.PublicKey import RSA
+import uuid
 import time
 import json
-from Crypto.Cipher import PKCS1_v1_5
-from . import tp_link_cipher
 import ast
-import uuid
+
+from base64 import b64decode
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_v1_5
+
+from .tp_link_cipher import TpLinkCipher
 
 
 # Old Functions to get device list from tplinkcloud
@@ -81,13 +83,13 @@ class P100():
 
     def encryptCredentials(self, email, password):
         # Password Encoding
-        self.encodedPassword = tp_link_cipher.TpLinkCipher.mime_encoder(
+        self.encodedPassword = TpLinkCipher.mime_encoder(
             password.encode("utf-8")
         )
 
         # Email Encoding
         self.encodedEmail = self.sha_digest_username(email)
-        self.encodedEmail = tp_link_cipher.TpLinkCipher.mime_encoder(
+        self.encodedEmail = TpLinkCipher.mime_encoder(
             self.encodedEmail.encode("utf-8")
         )
 
@@ -114,7 +116,7 @@ class P100():
         for i in range(0, 16):
             b_arr2.insert(i, do_final[i + 16])
 
-        return tp_link_cipher.TpLinkCipher(b_arr, b_arr2)
+        return TpLinkCipher(b_arr, b_arr2)
 
     def sha_digest_username(self, data):
         b_arr = data.encode("UTF-8")
