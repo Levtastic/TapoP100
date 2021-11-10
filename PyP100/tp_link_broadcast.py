@@ -1,5 +1,43 @@
+import socket
+import json
+
+from select import select
 from random import randrange
 from zlib import crc32
+from Crypto.PublicKey import RSA
+
+
+def get_device_infos(*, timeout=0.2, port=20002):
+    payload = get_payload()
+
+    for response in get_device_responses(payload, timeout=timeout, port=port):
+        try:
+            # The first 16 bytes are like those built by build_packet()
+            yield json.loads(response[16:])
+
+        except (IndexError, json.JSONDecodeError):
+            # It's possible for something else on the network to respond in an
+            #  unexpected way, so we can just drop weird responses
+            pass
+
+
+def get_payload():
+    key = RSA.generate(2048).publickey().exportKey("PEM")
+
+    # newline on the end and no spaces in separators to perfectly match
+    #  the packets sent by vendor apps
+    payload = json.dumps(
+        {'params': {'rsa_key': key.decode("utf-8") + '\n'}},
+        separators=(',', ':')
+    )
+
+    # Fun fact: the P100 plugs will respond just the same if you send
+    #  b'\x02\x00\x00\x01\x00\x00\x11\x00\x0e\xd7\xd6\xac\x84\x0e\xfdY'
+    #  which is the result of passing an empty string to build_packet()
+    #
+    # We send a full packet anyway, however, in case future firmware
+    #  updates fix that
+    return build_packet(payload)
 
 
 def build_packet(string):
@@ -19,37 +57,21 @@ def build_packet(string):
     return bytes(output_array)
 
 
+def get_device_responses(payload, *, timeout=0.2, port=20002):
+    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.setblocking(0)
+
+    sock.sendto(payload, ("255.255.255.255", port))
+
+    while True:
+        data_waiting = select((sock,), (), (), timeout)[0]
+        if not data_waiting:
+            break
+
+        yield sock.recv(4096)
+
+
 if __name__ == '__main__':
-    import socket
-    import json
-
-    from select import select
-    from Crypto.PublicKey import RSA
-
-    def broadcast(message, *, timeout=0.2, port=20002):
-        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.setblocking(0)
-
-        sock.sendto(message, ("255.255.255.255", port))
-
-        while True:
-            data_waiting = select((sock,), (), (), timeout)[0]
-            if not data_waiting:
-                break
-
-            yield sock.recv(4096)
-
-    # build payload
-    key = RSA.generate(2048).publickey().exportKey("PEM")
-
-    payload = json.dumps(
-        {'params': {'rsa_key': key.decode("utf-8") + '\n'}},
-        separators=(',', ':')
-    )
-
-    packet = build_packet(payload)
-
-    for result in broadcast(packet):
-        print(result)
-        print('-' * 10)
+    for device in get_device_infos():
+        print(device['result']['ip'])
