@@ -10,19 +10,13 @@ class b:
         self.i = bytearray(self.string_length + 16)
         self.i[16:] = string.encode('utf-8')
 
-        self.f_b()
+        self.i[0:4] = b'\x02\x00\x00\x01'
+        self.i[4:6] = self.string_length.to_bytes(2, 'big')
+        self.i[6:8] = b'\x11\x00'
+        self.i[8:12] = random.randrange(268435456).to_bytes(4, 'big')
+        self.i[12:16] = b'Zk|\x8d'
 
         self.i[12:16] = crc32(self.i).to_bytes(4, 'big')
-
-    def f_b(self):
-        self.i[0] = 2
-        self.i[1] = 0
-        self.i[2:4] = (1).to_bytes(2, 'big')
-        self.i[4:6] = self.string_length.to_bytes(2, 'big')
-        self.i[6] = 17
-        self.i[7] = 0
-        self.i[8:12] = random.randrange(268435456).to_bytes(4, 'big')
-        self.i[12:16] = (1516993677).to_bytes(4, 'big')
 
 
 if __name__ == '__main__':
