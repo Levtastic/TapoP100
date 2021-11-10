@@ -57,16 +57,16 @@ class P100():
     }
 
     def __init__(self, ipAddress, email, password, login=True):
-        self.ipAddress = ipAddress
-        self.terminalUUID = str(uuid.uuid4())
+        self._ipAddress = ipAddress
+        self._terminalUUID = str(uuid.uuid4())
 
-        self.email = email
-        self.password = password
+        self._email = email
+        self._password = password
 
-        self.errorCodes = ERROR_CODES
+        self._errorCodes = ERROR_CODES
 
-        self.encryptCredentials(email, password)
-        self.createKeyPair()
+        self._encryptCredentials(email, password)
+        self._createKeyPair()
 
         if login:
             self.handshake()
@@ -81,27 +81,27 @@ class P100():
         raise AttributeError(
             f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
-    def encryptCredentials(self, email, password):
+    def _encryptCredentials(self, email, password):
         # Password Encoding
-        self.encodedPassword = TpLinkCipher.mime_encoder(
+        self._encodedPassword = TpLinkCipher.mime_encoder(
             password.encode("utf-8")
         )
 
         # Email Encoding
-        self.encodedEmail = self.sha_digest_username(email)
-        self.encodedEmail = TpLinkCipher.mime_encoder(
-            self.encodedEmail.encode("utf-8")
+        self._encodedEmail = self._sha_digest_username(email)
+        self._encodedEmail = TpLinkCipher.mime_encoder(
+            self._encodedEmail.encode("utf-8")
         )
 
-    def createKeyPair(self):
-        self.keys = RSA.generate(1024)
+    def _createKeyPair(self):
+        self._keys = RSA.generate(1024)
 
-        self.privateKey = self.keys.exportKey("PEM")
-        self.publicKey = self.keys.publickey().exportKey("PEM")
+        self._privateKey = self._keys.exportKey("PEM")
+        self._publicKey = self._keys.publickey().exportKey("PEM")
 
-    def decode_handshake_key(self, key):
+    def _decode_handshake_key(self, key):
         decode: bytes = b64decode(key.encode("UTF-8"))
-        decode2: bytes = self.privateKey
+        decode2: bytes = self._privateKey
 
         cipher = PKCS1_v1_5.new(RSA.importKey(decode2))
         do_final = cipher.decrypt(decode, None)
@@ -118,7 +118,7 @@ class P100():
 
         return TpLinkCipher(b_arr, b_arr2)
 
-    def sha_digest_username(self, data):
+    def _sha_digest_username(self, data):
         b_arr = data.encode("UTF-8")
         digest = hashlib.sha1(b_arr).digest()
 
@@ -135,11 +135,11 @@ class P100():
         return sb
 
     def handshake(self):
-        URL = f"http://{self.ipAddress}/app"
+        URL = f"http://{self._ipAddress}/app"
         Payload = {
             "method": "handshake",
             "params": {
-                "key": self.publicKey.decode("utf-8"),
+                "key": self._publicKey.decode("utf-8"),
                 "requestTimeMils": int(round(time.time() * 1000))
             }
         }
@@ -147,25 +147,25 @@ class P100():
         r = requests.post(URL, json=Payload)
 
         encryptedKey = r.json()["result"]["key"]
-        self.tpLinkCipher = self.decode_handshake_key(encryptedKey)
+        self._tpLinkCipher = self._decode_handshake_key(encryptedKey)
 
         try:
             self.cookie = r.headers["Set-Cookie"][:-13]
 
-        except:
-            raise self.generateException(r.json()["error_code"])
+        except (KeyError, IndexError):
+            raise self._generateException(r.json()["error_code"])
 
-    def generateException(self, error_code):
-        error_text = self.errorCodes.get(error_code, "Unknown error code")
+    def _generateException(self, error_code):
+        error_text = self._errorCodes.get(error_code, "Unknown error code")
         return P100Error(f"{error_code}: {error_text}")
 
     def login(self):
-        URL = f"http://{self.ipAddress}/app"
+        URL = f"http://{self._ipAddress}/app"
         Payload = {
             "method": "login_device",
             "params": {
-                "username": self.encodedEmail,
-                "password": self.encodedPassword
+                "username": self._encodedEmail,
+                "password": self._encodedPassword
             },
             "requestTimeMils": int(round(time.time() * 1000)),
         }
@@ -173,7 +173,7 @@ class P100():
             "Cookie": self.cookie
         }
 
-        EncryptedPayload = self.tpLinkCipher.encrypt(json.dumps(Payload))
+        EncryptedPayload = self._tpLinkCipher.encrypt(json.dumps(Payload))
 
         SecurePassthroughPayload = {
             "method": "securePassthrough",
@@ -184,31 +184,32 @@ class P100():
 
         r = requests.post(URL, json=SecurePassthroughPayload, headers=headers)
 
-        decryptedResponse = self.tpLinkCipher.decrypt(
+        decryptedResponse = self._tpLinkCipher.decrypt(
             r.json()["result"]["response"]
         )
 
         try:
             self.token = ast.literal_eval(decryptedResponse)["result"]["token"]
-        except:
-            raise self.generateException(
+
+        except KeyError:
+            raise self._generateException(
                 ast.literal_eval(decryptedResponse)["error_code"]
             )
 
     def setDeviceInfo(self, params):
-        URL = f"http://{self.ipAddress}/app?token={self.token}"
+        URL = f"http://{self._ipAddress}/app?token={self.token}"
         Payload = {
             "method": "set_device_info",
             "params": params,
             "requestTimeMils": int(round(time.time() * 1000)),
-            "terminalUUID": self.terminalUUID
+            "terminalUUID": self._terminalUUID
         }
 
         headers = {
             "Cookie": self.cookie
         }
 
-        EncryptedPayload = self.tpLinkCipher.encrypt(json.dumps(Payload))
+        EncryptedPayload = self._tpLinkCipher.encrypt(json.dumps(Payload))
 
         SecurePassthroughPayload = {
             "method": "securePassthrough",
@@ -219,11 +220,11 @@ class P100():
 
         r = requests.post(URL, json=SecurePassthroughPayload, headers=headers)
 
-        decryptedResponse = json.loads(self.tpLinkCipher.decrypt(
+        decryptedResponse = json.loads(self._tpLinkCipher.decrypt(
             r.json()["result"]["response"]))
 
         if decryptedResponse['error_code'] != 0:
-            raise self.generateException(decryptedResponse['error_code'])
+            raise self._generateException(decryptedResponse['error_code'])
 
     def setParams(self, **params):
         self.setDeviceInfo(params)
@@ -246,7 +247,7 @@ class P100():
         return self.setParams(brightness=brightness)
 
     def getDeviceInfo(self):
-        URL = f"http://{self.ipAddress}/app?token={self.token}"
+        URL = f"http://{self._ipAddress}/app?token={self.token}"
         Payload = {
             "method": "get_device_info",
             "requestTimeMils": int(round(time.time() * 1000)),
@@ -256,7 +257,7 @@ class P100():
             "Cookie": self.cookie
         }
 
-        EncryptedPayload = self.tpLinkCipher.encrypt(json.dumps(Payload))
+        EncryptedPayload = self._tpLinkCipher.encrypt(json.dumps(Payload))
 
         SecurePassthroughPayload = {
             "method": "securePassthrough",
@@ -266,13 +267,13 @@ class P100():
         }
 
         r = requests.post(URL, json=SecurePassthroughPayload, headers=headers)
-        decryptedResponse = self.tpLinkCipher.decrypt(
+        decryptedResponse = self._tpLinkCipher.decrypt(
             r.json()["result"]["response"]
         )
 
         info = json.loads(decryptedResponse)
 
         if info['error_code'] != 0:
-            raise self.generateException(info['error_code'])
+            raise self._generateException(info['error_code'])
 
         return info
