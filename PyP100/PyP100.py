@@ -289,6 +289,9 @@ class P100():
     def turnOff(self):
         return self.setParams(device_on=False)
 
+    def toggle(self):
+        return self.setParams(device_on=not self.device_on)
+
     def setBrightness(self, brightness):
         return self.setParams(brightness=brightness)
 
