@@ -8,7 +8,7 @@ The original repo can be found at https://github.com/fishbigger/TapoP100
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install PyP100.
 
 ```bash
-pip3 install git@github.com:Levtastic/TapoP100.git
+pip3 install git+https://github.com/Levtastic/TapoP100.git#egg=PyP100
 ```
 
 ## Usage
