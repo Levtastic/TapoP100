@@ -1,3 +1,5 @@
+Note: This library no longer works, and I am not maintaining it as I have switched to using [python-kasa](https://github.com/python-kasa/python-kasa) instead, which supports almost everything this library (briefly) supported. You have to implement your own toggle code and searching by name, but on the plus side that library is maintained and actually works!
+
 # Tapo P100
 Tapo P100 is a Python library for controlling the Tp-link Tapo P100 plugs, P105 plugs and L510E bulbs.
 This version of the repo has been heavily modified to suit [Levtastic](https://github.com/Levtastic)'s needs.
